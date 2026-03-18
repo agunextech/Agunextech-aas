@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#1a7a3c"/>
+<meta name="description" content="Agunextech Academic Analysis System v2"/>
+<title>Agunextech AAS v2</title>
+<link rel="manifest" href="#" id="manifest-link"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ══════════════════════════════════════════
+  // 🔥 PASTE YOUR FIREBASE CONFIG HERE
+  // ══════════════════════════════════════════
+  const firebaseConfig = {
+    apiKey: "AIzaSyAtkOspcvCl5H__4GHu29602Tgtxo8wedY",
+    authDomain: "agunextech.firebaseapp.com",
+    projectId: "agunextech",
+    storageBucket: "agunextech.firebasestorage.app",
+    messagingSenderId: "548748066684",
+    appId: "1:548748066684:web:abd47d79796ee8a3922ef9"
+  };
+
+  let app, auth, db;
+  let firebaseReady = false;
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db   = getFirestore(app);
+    firebaseReady = !firebaseConfig.apiKey.includes("YOUR_");
+  } catch(e) { console.warn("Firebase not configured – offline mode"); }
+
+  window._fb = { auth, db, firebaseReady,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    signOut, onAuthStateChanged, doc, setDoc, getDoc };
+  window.dispatchEvent(new Event("firebase-ready"));
+</script>
+
+<style>
+:root{
+  --g9:#0d4a21;--g8:#155d2d;--g7:#1a7a3c;--g6:#22963f;
+  --g5:#2db84f;--g4:#4fd370;--g3:#85e0a0;--g1:#e6f7ec;--g0:#f0fbf4;
+  --w:#fff;--k9:#111827;--k8:#1f2937;--k7:#374151;--k6:#4b5563;
+  --k4:#9ca3af;--k2:#e5e7eb;--k1:#f3f4f6;--k0:#f9fafb;
+  --amber:#f59e0b;--red:#ef4444;--blue:#3b82f6;
+  --sh:0 1px 3px rgba(0,0,0,.08);--shm:0 4px 16px rgba(0,0,0,.10);
+  --shl:0 12px 40px rgba(0,0,0,.15);
+  --r:14px;--rs:8px;--font:'Plus Jakarta Sans',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--k0);color:var(--k9);min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* SCREENS */
+.screen{display:none;min-height:100vh}
+.screen.active{display:flex;flex-direction:column}
+
+/* AUTH */
+#auth-screen{
+  background:linear-gradient(145deg,var(--g9) 0%,var(--g7) 55%,var(--g5) 100%);
+  align-items:center;justify-content:center;padding:20px;position:relative;overflow:hidden;
+}
+#auth-screen::before{
+  content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fff' fill-opacity='.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
+}
+.auth-card{background:var(--w);border-radius:24px;padding:36px;width:100%;max-width:420px;box-shadow:var(--shl);position:relative;z-index:1}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.auth-logo-icon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--g6),var(--g8));display:flex;align-items:center;justify-content:center;font-size:22px}
+.auth-logo h1{font-size:18px;font-weight:800;color:var(--g8);line-height:1.1}
+.auth-logo p{font-size:10px;color:var(--k4);text-transform:uppercase;letter-spacing:.08em}
+.auth-tabs{display:flex;background:var(--k1);border-radius:var(--rs);padding:4px;margin-bottom:20px}
+.auth-tab{flex:1;text-align:center;padding:12px 8px;font-size:15px;font-weight:700;border-radius:6px;cursor:pointer;transition:all .2s;color:var(--k6);user-select:none;-webkit-tap-highlight-color:transparent}
+.auth-tab.active{background:var(--w);color:var(--g7);box-shadow:var(--sh)}
+.demo-bar{
+  background:linear-gradient(90deg,#fef3c7,#fde68a);border:1.5px solid #f59e0b;
+  border-radius:10px;padding:12px 14px;margin-bottom:18px;
+}
+.demo-bar p{font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px}
+.demo-bar .demo-creds{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.demo-cred{background:white;border-radius:6px;padding:6px 10px;font-size:11px;color:#78350f;border:1px solid #fcd34d}
+.demo-cred strong{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#92400e}
+.btn-demo{width:100%;margin-top:8px;background:#f59e0b;color:white;font-size:13px;font-weight:700;padding:10px;border:none;border-radius:6px;cursor:pointer;transition:all .2s}
+.btn-demo:hover{background:#d97706}
+
+/* FORM ELEMENTS */
+.fg{margin-bottom:14px}
+label{display:block;font-size:11px;font-weight:700;color:var(--k7);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em}
+input[type=email],input[type=password],input[type=text],input[type=number],select,textarea{
+  width:100%;padding:11px 13px;border:1.5px solid var(--k2);border-radius:var(--rs);
+  font-family:var(--font);font-size:14px;color:var(--k9);background:var(--w);
+  transition:border-color .2s,box-shadow .2s;outline:none;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--g5);box-shadow:0 0 0 3px rgba(34,150,63,.12)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:11px 18px;border-radius:var(--rs);font-family:var(--font);font-size:13px;
+  font-weight:700;cursor:pointer;transition:all .2s;border:none;text-decoration:none;white-space:nowrap}
+.btn-primary{background:var(--g6);color:var(--w);width:100%;padding:13px;font-size:14px}
+.btn-primary:hover{background:var(--g7);transform:translateY(-1px);box-shadow:0 4px 12px rgba(34,150,63,.4)}
+.btn-secondary{background:var(--k1);color:var(--k7)}
+.btn-secondary:hover{background:var(--k2)}
+.btn-danger{background:#fee2e2;color:var(--red)}
+.btn-danger:hover{background:var(--red);color:white}
+.btn-ghost{background:transparent;color:var(--g7);padding:8px 12px}
+.btn-amber{background:#fef3c7;color:#92400e}
+.btn-amber:hover{background:#fde68a}
+.btn-blue{background:#eff6ff;color:#1d4ed8}
+.btn-sm{padding:6px 11px;font-size:12px}
+.btn-xs{padding:4px 8px;font-size:11px}
+.btn-icon{padding:7px;min-width:34px;min-height:34px}
+.msg{padding:9px 13px;border-radius:var(--rs);font-size:13px;font-weight:500;margin-top:10px}
+.msg-error{background:#fee2e2;color:#991b1b}
+.msg-success{background:#dcfce7;color:#166534}
+
+/* TOPBAR */
+#app-screen{background:var(--k0)}
+.topbar{background:var(--g7);color:var(--w);padding:0 18px;height:58px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.topbar-logo{font-size:16px;font-weight:800;letter-spacing:-.01em}
+.topbar-logo span{color:var(--g3)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.user-badge{background:rgba(255,255,255,.15);border-radius:20px;padding:5px 11px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px}
+.offline-chip{background:#fef3c7;color:#92400e;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+
+/* NAV */
+.nav-tabs{background:var(--w);display:flex;border-bottom:2px solid var(--k2);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tab{flex-shrink:0;padding:13px 18px;font-size:13px;font-weight:600;color:var(--k6);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.nav-tab.active{color:var(--g7);border-bottom-color:var(--g6)}
+.nav-tab:hover{color:var(--g6)}
+
+/* CONTENT */
+.content{flex:1;padding:18px;max-width:1200px;margin:0 auto;width:100%}
+.page{display:none}.page.active{display:block}
+
+/* CARDS */
+.card{background:var(--w);border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--k2);overflow:hidden}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--k1);display:flex;align-items:center;justify-content:space-between;background:var(--k0)}
+.card-header h2{font-size:14px;font-weight:700;color:var(--k9)}
+.card-body{padding:18px}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:var(--w);border-radius:var(--r);padding:14px;border:1px solid var(--k2);box-shadow:var(--sh);text-align:center}
+.stat-num{font-size:26px;font-weight:800;color:var(--g7);line-height:1}
+.stat-label{font-size:10px;color:var(--k4);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+
+/* SCHOOL LIST */
+.school-list{display:flex;flex-direction:column;gap:10px}
+.school-item{background:var(--w);border-radius:var(--r);border:1.5px solid var(--k2);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;transition:all .2s}
+.school-item:hover{border-color:var(--g4);box-shadow:var(--shm)}
+.school-item-info h3{font-size:14px;font-weight:700}
+.school-item-info p{font-size:11px;color:var(--k4);margin-top:2px}
+.school-item-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+
+/* BADGE */
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.badge-green{background:var(--g1);color:var(--g8)}
+.badge-amber{background:#fef3c7;color:#92400e}
+.badge-blue{background:#eff6ff;color:#1e40af}
+.badge-red{background:#fee2e2;color:#991b1b}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--w);border-radius:24px 24px 0 0;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;padding:22px;animation:slideUp .28s ease}
+@media(min-width:600px){.modal-overlay{align-items:center}.modal{border-radius:24px;margin:16px}}
+@keyframes slideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-header h3{font-size:16px;font-weight:800}
+.modal-close{width:30px;height:30px;border-radius:50%;background:var(--k1);border:none;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center}
+
+/* MARKS TABLE */
+.marks-table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:500px}
+thead th{background:var(--g8);color:var(--w);padding:9px 10px;font-size:11px;font-weight:700;text-align:left;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+tbody tr:nth-child(even){background:var(--k0)}
+tbody tr:hover{background:var(--g0)}
+td{padding:7px 10px;font-size:12px;border-bottom:1px solid var(--k1);vertical-align:middle}
+td input[type=number]{width:56px;padding:4px 6px;font-size:12px;text-align:center;border:1.5px solid var(--k2);border-radius:5px}
+td input[type=number]:focus{border-color:var(--g5)}
+td input[type=text]{padding:4px 7px;font-size:12px;border:1.5px solid var(--k2);border-radius:5px}
+td input[type=text]:focus{border-color:var(--g5)}
+.grade-badge{display:inline-block;min-width:30px;text-align:center;padding:2px 6px;border-radius:5px;font-size:11px;font-weight:800}
+.grade-A{background:#dcfce7;color:#166534}
+.grade-B{background:#dbeafe;color:#1e40af}
+.grade-C{background:#fef3c7;color:#92400e}
+.grade-D{background:#fee2e2;color:#991b1b}
+.grade-E,.grade-Y{background:var(--k1);color:var(--k6)}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:40px 18px;color:var(--k4)}
+.empty-state .icon{font-size:44px;margin-bottom:10px}
+.empty-state h3{font-size:15px;font-weight:700;color:var(--k6);margin-bottom:5px}
+.empty-state p{font-size:13px;margin-bottom:14px}
+
+/* FORM GRID */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+@media(max-width:480px){.form-grid{grid-template-columns:1fr}}
+
+/* SECTION HEADER */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.section-header h2{font-size:17px;font-weight:800;color:var(--k9)}
+
+/* BREADCRUMB */
+.breadcrumb{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--k4);margin-bottom:14px;flex-wrap:wrap}
+.breadcrumb span{cursor:pointer}.breadcrumb span:hover{color:var(--g7)}
+.breadcrumb-sep{color:var(--k2)}
+
+/* TOAST */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--k8);color:var(--w);padding:11px 18px;border-radius:30px;font-size:13px;font-weight:600;z-index:9999;transition:transform .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* INSTALL */
+#install-banner{background:linear-gradient(90deg,var(--g8),var(--g6));color:var(--w);padding:9px 14px;display:none;align-items:center;justify-content:space-between;gap:8px;font-size:12px}
+#install-banner.show{display:flex}
+
+/* SUBJECT CHIP */
+.subject-chip{display:inline-flex;align-items:center;gap:4px;background:var(--g1);border:1.5px solid var(--g3);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--g8);cursor:pointer;transition:all .2s;margin:3px}
+.subject-chip.off{background:var(--k1);border-color:var(--k2);color:var(--k4)}
+.subject-chip:hover{transform:scale(1.05)}
+
+/* CSV UPLOAD */
+.csv-drop{border:2px dashed var(--k2);border-radius:var(--r);padding:24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--k0)}
+.csv-drop:hover,.csv-drop.drag{border-color:var(--g4);background:var(--g0)}
+.csv-drop .icon{font-size:32px;margin-bottom:8px}
+.csv-drop p{font-size:13px;color:var(--k6)}
+.csv-drop small{font-size:11px;color:var(--k4)}
+
+/* ANALYSIS CHART */
+.chart-bar-wrap{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.chart-row{display:flex;align-items:center;gap:10px}
+.chart-label{width:60px;font-size:12px;font-weight:700;text-align:right;flex-shrink:0}
+.chart-bar-bg{flex:1;height:22px;background:var(--k1);border-radius:6px;overflow:hidden}
+.chart-bar{height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:white;transition:width .6s ease;min-width:2px}
+.chart-count{width:30px;font-size:12px;font-weight:700;color:var(--k7)}
+
+/* AI REMARKS */
+.ai-thinking{display:flex;align-items:center;gap:8px;color:var(--g7);font-size:13px;font-weight:600}
+.ai-dot{width:8px;height:8px;border-radius:50%;background:var(--g5);animation:pulse 1s infinite}
+.ai-dot:nth-child(2){animation-delay:.2s}
+.ai-dot:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+.remark-card{background:var(--g0);border:1.5px solid var(--g3);border-radius:var(--r);padding:14px;margin-top:10px}
+.remark-card p{font-size:13px;color:var(--k8);line-height:1.6}
+
+/* ANALYSIS GRID */
+.analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:600px){.analysis-grid{grid-template-columns:1fr}}
+
+/* RESPONSIVE */
+@media(max-width:480px){
+  .content{padding:12px}
+  .auth-card{padding:24px 18px}
+  .topbar{padding:0 12px}
+  .topbar-logo{font-size:14px}
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- INSTALL BANNER -->
+<div id="install-banner">
+  <span>📲 Install as app for offline use</span>
+  <button class="btn btn-sm" id="install-btn" style="background:white;color:var(--g7);">Install</button>
+  <button style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer" id="dismiss-install">×</button>
+</div>
+
+<!-- ═══════════════════════════════
+     AUTH SCREEN
+════════════════════════════════ -->
+<div id="auth-screen" class="screen active">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🎓</div>
+      <div>
+        <h1>Agunextech</h1>
+        <p>Academic Analysis System v2</p>
+      </div>
+    </div>
+
+    <!-- DEMO LOGIN BAR -->
+    <div class="demo-bar">
+      <p>🧪 Try Demo Mode — No signup needed</p>
+      <div class="demo-creds">
+        <div class="demo-cred"><strong>Email</strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="650100080a250402100b001d1100060d4b0e00">[email&#160;protected]</a></div>
+        <div class="demo-cred"><strong>Password</strong>demo1234</div>
+      </div>
+      <button class="btn-demo" onclick="demoLogin()">▶ Enter Demo Now</button>
+    </div>
+
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</div>
+      <div class="auth-tab" id="tab-register" onclick="switchTab('register')">Register</div>
+    </div>
+
+    <div id="login-form">
+      <div class="fg"><label>Email</label><input type="email" id="login-email" placeholder="teacher@school.ac.ke"/></div>
+      <div class="fg"><label>Password</label><input type="password" id="login-password" placeholder="••••••••"/></div>
+      <button class="btn btn-primary" id="login-btn" onclick="handleLogin()">Sign In →</button>
+      <div id="login-msg"></div>
+    </div>
+
+    <div id="register-form" style="display:none">
+      <div class="fg"><label>Full Name</label><input type="text" id="reg-name" placeholder="Your name"/></div>
+      <div class="fg"><label>Email</label><input type="email" id="reg-email" placeholder="teacher@school.ac.ke"/></div>
+      <div class="fg"><label>Password</label><input type="password" id="reg-password" placeholder="Min. 6 characters"/></div>
+      <button class="btn btn-primary" id="register-btn" onclick="handleRegister()">Create Account →</button>
+      <div id="reg-msg"></div>
+    </div>
+
+    <p style="text-align:center;font-size:10px;color:var(--k4);margin-top:14px">🔒 Cloud sync via Firebase · Works offline too</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     APP SCREEN
+════════════════════════════════ -->
+<div id="app-screen" class="screen">
+
+  <div class="topbar">
+    <div class="topbar-logo">Agunex<span>tech</span> <span style="font-size:10px;opacity:.6">AAS</span></div>
+    <div class="topbar-right">
+      <span id="offline-chip" class="offline-chip" style="display:none">Offline</span>
+      <div class="user-badge">👤 <span id="user-name-display">User</span></div>
+      <button class="btn btn-sm" id="logout-btn" style="background:rgba(255,255,255,.15);color:white;padding:6px 11px">Logout</button>
+    </div>
+  </div>
+
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-page="dashboard">📊 Dashboard</div>
+    <div class="nav-tab" data-page="schools">🏫 Schools</div>
+    <div class="nav-tab" data-page="marks-entry">📝 Marks</div>
+    <div class="nav-tab" data-page="results">🏆 Results</div>
+    <div class="nav-tab" data-page="analysis">📈 Analysis</div>
+    <div class="nav-tab" data-page="downloads">⬇️ Downloads</div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── DASHBOARD ── -->
+    <div id="page-dashboard" class="page active">
+      <div class="section-header">
+        <h2>Dashboard</h2>
+        <span style="font-size:11px;color:var(--k4)" id="dashboard-date"></span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-num" id="stat-schools">0</div><div class="stat-label">Schools</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-classes">0</div><div class="stat-label">Classes</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-students">0</div><div class="stat-label">Students</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-exams">0</div><div class="stat-label">Exams</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>Recent Classes</h2></div>
+        <div class="card-body" id="recent-activity">
+          <div class="empty-state"><div class="icon">📋</div><h3>No classes yet</h3><p>Start by adding a school</p>
+          <button class="btn btn-primary" style="width:auto" onclick="showPage('schools')">+ Add School</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCHOOLS ── -->
+    <div id="page-schools" class="page">
+      <div class="section-header">
+        <h2>Schools & Classes</h2>
+        <button class="btn btn-primary" style="width:auto" onclick="openModal('school-modal')">+ New School</button>
+      </div>
+      <div id="schools-list" class="school-list">
+        <div class="empty-state"><div class="icon">🏫</div><h3>No schools yet</h3><p>Click "+ New School" to begin</p></div>
+      </div>
+    </div>
+
+    <!-- ── MARKS ENTRY ── -->
+    <div id="page-marks-entry" class="page">
+      <div class="section-header"><h2>Marks Entry</h2></div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="fg"><label>School</label>
+              <select id="me-school-sel" onchange="loadClassesFor('me')"><option value="">— Select —</option></select>
+            </div>
+            <div class="fg"><label>Class / Exam</label>
+              <select id="me-class-sel" onchange="loadMarksTable()"><option value="">— Select —</option></select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="me-table-area" style="display:none">
+        <div class="breadcrumb" id="me-breadcrumb"></div>
+        <div class="card">
+          <div class="card-header">
+            <h2 id="me-table-title">Marks</h2>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn btn-sm btn-blue" onclick="openModal('csv-modal')">📂 Import CSV</button>
+              <button class="btn btn-sm btn-secondary" onclick="addStudentRow()">+ Student</button>
+              <button class="btn btn-sm btn-primary" id="save-btn" onclick="saveMarks()">💾 Save</button>
+            </div>
+          </div>
+          <div class="marks-table-wrap">
+            <table id="marks-table">
+              <thead id="marks-thead"></thead>
+              <tbody id="marks-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RESULTS ── -->
+    <div id="page-results" class="page">
+      <div class="section-header"><h2>Results & Merit List</h2></div>
+      <div class="form-grid" style="margin-bottom:14px">
+        <div class="fg"><label>School</label>
+          <select id="res-school-sel" onchange="loadClassesFor('res')"><option value="">— Select —</option></select>
+        </div>
+        <div class="fg"><label>Class</label>
+          <select id="res-class-sel" onchange="showResults()"><option value="">— Select —</option></select>
+        </div>
+      </div>
+      <div id="results-area">
+        <div class="empty-state"><div class="icon">🏆</div><h3>Select a class to view results</h3></div>
+      </div>
+    </div>
+
+    <!-- ── ANALYSIS ── -->
+    <div id="page-analysis" class="page">
+      <div class="section-header"><h2>Class Analysis</h2></div>
+      <div class="form-grid" style="margin-bottom:14px">
+        <div class="fg"><label>School</label>
+          <select id="an-school-sel" onchange="loadClassesFor('an')"><option value="">— Select —</option></select>
+        </div>
+        <div class="fg"><label>Class</label>
+          <select id="an-class-sel" onchange="showAnalysis()"><option value="">— Select —</option></select>
+        </div>
+      </div>
+      <div id="analysis-area">
+        <div class="empty-state"><div class="icon">📈</div><h3>Select a class to see analysis</h3></div>
+      </div>
+    </div>
+
+    <!-- ── DOWNLOADS ── -->
+    <div id="page-downloads" class="page">
+      <div class="section-header"><h2>Downloads</h2></div>
+      <div class="form-grid" style="margin-bottom:14px">
+        <div class="fg"><label>School</label>
+          <select id="dl-school-sel" onchange="loadClassesFor('dl')"><option value="">— Select —</option></select>
+        </div>
+        <div class="fg"><label>Class</label>
+          <select id="dl-class-sel"><option value="">— Select —</option></select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <button class="btn btn-primary" onclick="downloadMeritPDF()" style="padding:14px">📄 Merit List PDF</button>
+        <button class="btn btn-secondary" onclick="downloadMeritCSV()" style="padding:14px;border:2px solid var(--g3)">📊 Merit List CSV</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <button class="btn btn-secondary" onclick="downloadAllReports()" style="padding:14px">📋 All Reports PDF</button>
+        <button class="btn btn-ghost" onclick="openSingleReport()" style="padding:14px;border:2px solid var(--k2)">👤 Single Report</button>
+      </div>
+      <div id="dl-student-pick" style="display:none">
+        <div class="card"><div class="card-body">
+          <div class="fg"><label>Select Student</label><select id="dl-student-sel"></select></div>
+          <button class="btn btn-primary" style="width:auto" onclick="printOneReport()">🖨 Print Report</button>
+        </div></div>
+      </div>
+      <!-- AI REMARKS SECTION -->
+      <div class="card" style="margin-top:14px">
+        <div class="card-header"><h2>🤖 AI Remarks Generator</h2></div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--k6);margin-bottom:12px">Select a student to generate smart teacher remarks based on their performance.</p>
+          <div class="form-grid" style="margin-bottom:10px">
+            <div class="fg"><label>School</label>
+              <select id="ai-school-sel" onchange="loadClassesFor('ai')"><option value="">— Select —</option></select>
+            </div>
+            <div class="fg"><label>Class</label>
+              <select id="ai-class-sel" onchange="loadStudentsForAI()"><option value="">— Select —</option></select>
+            </div>
+          </div>
+          <div class="fg"><label>Student</label><select id="ai-student-sel"><option value="">— Select —</option></select></div>
+          <button class="btn btn-amber" onclick="generateRemarks()" style="width:auto">✨ Generate Remarks</button>
+          <div id="ai-output"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- School Modal -->
+<div id="school-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3>Add School</h3><button class="modal-close" onclick="closeModal('school-modal')">×</button></div>
+    <div class="fg"><label>School Name</label><input type="text" id="school-name" placeholder="e.g. Dadema Secondary School"/></div>
+    <div class="fg"><label>County (optional)</label><input type="text" id="school-county" placeholder="e.g. Kisumu"/></div>
+    <button class="btn btn-primary" onclick="saveSchool()">Save School</button>
+  </div>
+</div>
+
+<!-- Class Modal -->
+<div id="class-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="class-modal-title">Add Class</h3>
+      <button class="modal-close" onclick="closeModal('class-modal')">×</button>
+    </div>
+    <input type="hidden" id="class-school-id"/>
+    <div class="form-grid">
+      <div class="fg"><label>Term</label>
+        <select id="class-term"><option>Term 1</option><option>Term 2</option><option>Term 3</option></select>
+      </div>
+      <div class="fg"><label>Year</label><input type="number" id="class-year" value="2026" min="2020" max="2040"/></div>
+    </div>
+    <div class="form-grid">
+      <div class="fg"><label>Class</label>
+        <select id="class-level">
+          <option>Form 1</option><option>Form 2</option><option>Form 3</option><option>Form 4</option>
+          <option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option>
+        </select>
+      </div>
+      <div class="fg"><label>Curriculum</label>
+        <select id="class-curr" onchange="renderSubjectPicker()">
+          <option value="844">8-4-4 (KCSE)</option>
+          <option value="cbc">CBC</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label>Exam Name (optional)</label><input type="text" id="class-exam-name" placeholder="e.g. End-Term 2026"/></div>
+
+    <!-- SUBJECT CUSTOMIZATION -->
+    <div class="fg">
+      <label>Select Subjects <span style="font-size:10px;color:var(--k4);font-weight:400">(tap to toggle)</span></label>
+      <div id="subject-picker" style="margin-top:6px"></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveClass()">Save Class</button>
+  </div>
+</div>
+
+<!-- CSV Import Modal -->
+<div id="csv-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3>📂 Import Students from CSV</h3><button class="modal-close" onclick="closeModal('csv-modal')">×</button></div>
+    <div class="csv-drop" id="csv-drop" onclick="document.getElementById('csv-file-input').click()">
+      <div class="icon">📄</div>
+      <p>Click to choose a CSV file</p>
+      <small>Format: AdmNo, StudentName (one per line)</small>
+    </div>
+    <input type="file" id="csv-file-input" accept=".csv,.txt" style="display:none" onchange="handleCSVFile(this)"/>
+    <div id="csv-preview" style="margin-top:12px"></div>
+    <div style="margin-top:12px">
+      <p style="font-size:12px;color:var(--k6);margin-bottom:8px"><strong>Example CSV format:</strong></p>
+      <pre style="background:var(--k1);padding:10px;border-radius:8px;font-size:11px;color:var(--k7)">AdmNo,Name
+001,John Otieno
+002,Mary Achieng
+003,Peter Kamau</pre>
+    </div>
+    <button class="btn btn-primary" id="csv-import-btn" style="margin-top:12px;display:none" onclick="importCSVStudents()">Import Students</button>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+const S = { user:null, schools:{}, currentSchoolId:null, currentClassId:null };
+let csvParsed = [];
+let autoSaveTimer = null;
+let subjectSelections = {};
+
+// ═══════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════
+function genId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6) }
+function lsSave(k,v){ try{localStorage.setItem(k,JSON.stringify(v))}catch(e){} }
+function lsLoad(k){ try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null} }
+function lsKey(uid,p){ return `aas_${uid}_${p}` }
+
+function toast(msg,dur=2800){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),dur);
+}
+
+function openModal(id){ document.getElementById(id).classList.add('open') }
+function closeModal(id){ document.getElementById(id).classList.remove('open') }
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+// ═══════════════════════════════════════════
+// AUTH TABS
+// ═══════════════════════════════════════════
+function switchTab(which){
+  // Switch tab highlight
+  document.getElementById('tab-login').classList.toggle('active', which==='login');
+  document.getElementById('tab-register').classList.toggle('active', which==='register');
+  // Show/hide forms
+  document.getElementById('login-form').style.display = which==='login' ? 'block' : 'none';
+  document.getElementById('register-form').style.display = which==='register' ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════
+// DEMO LOGIN
+// ═══════════════════════════════════════════
+function demoLogin(){
+  // Bypass Firebase entirely — go straight into demo mode
+  const demoUser = {
+    uid: 'demo_user_local',
+    email: 'demo@agunextech.ke',
+    displayName: 'Demo Teacher'
+  };
+  onUserLoggedIn(demoUser);
+  toast('👋 Welcome to Demo Mode!');
+}
+
+// ═══════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════
+async function doAuth(action,email,pass,name){
+  const fb=window._fb||{};
+  if(!fb.firebaseReady){
+    // Offline demo mode — any credentials work
+    S.user={uid:'demo_'+btoa(email).slice(0,8), email, displayName:name||email.split('@')[0]};
+    return {user:S.user};
+  }
+  try{
+    let cred;
+    if(action==='register') cred=await fb.createUserWithEmailAndPassword(fb.auth,email,pass);
+    else cred=await fb.signInWithEmailAndPassword(fb.auth,email,pass);
+    return {user:cred.user};
+  }catch(e){ return {error:e.message.replace('Firebase: ','').replace(/\(auth.*\)/,'')} }
+}
+
+async function handleLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-password').value;
+  const msgEl=document.getElementById('login-msg');
+  msgEl.innerHTML='';
+  if(!email||!pass){msgEl.innerHTML='<div class="msg msg-error">Fill in all fields</div>';return}
+  const btn=document.getElementById('login-btn');
+  btn.textContent='Signing in…';btn.disabled=true;
+  const res=await doAuth('login',email,pass);
+  btn.textContent='Sign In →';btn.disabled=false;
+  if(res.error){msgEl.innerHTML=`<div class="msg msg-error">${res.error}</div>`;return}
+  onUserLoggedIn(res.user);
+}
+
+document.getElementById('login-btn').addEventListener('click',handleLogin);
+
+async function handleRegister(){
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const pass=document.getElementById('reg-password').value;
+  const msgEl=document.getElementById('reg-msg');
+  msgEl.innerHTML='';
+  if(!name||!email||!pass){msgEl.innerHTML='<div class="msg msg-error">Fill in all fields</div>';return}
+  if(pass.length<6){msgEl.innerHTML='<div class="msg msg-error">Password must be at least 6 characters</div>';return}
+  const btn=document.getElementById('register-btn');
+  btn.textContent='Creating…';btn.disabled=true;
+  const res=await doAuth('register',email,pass,name);
+  btn.textContent='Create Account →';btn.disabled=false;
+  if(res.error){msgEl.innerHTML=`<div class="msg msg-error">${res.error}</div>`;return}
+  onUserLoggedIn(res.user);
+}
+
+document.getElementById('register-btn').addEventListener('click',handleRegister);
+
+document.getElementById('logout-btn').addEventListener('click',async()=>{
+  const fb=window._fb||{};
+  if(fb.firebaseReady) await fb.signOut(fb.auth);
+  S.user=null; S.schools={};
+  showScreen('auth-screen');
+});
+
+// ═══════════════════════════════════════════
+// ON LOGIN
+// ═══════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+async function onUserLoggedIn(user){
+  S.user=user;
+  const name=user.displayName||user.email?.split('@')[0]||'User';
+  document.getElementById('user-name-display').textContent=name;
+  const fb=window._fb||{};
+  if(!fb.firebaseReady) document.getElementById('offline-chip').style.display='';
+  showScreen('app-screen');
+  await loadUserData();
+  refreshAll();
+  document.getElementById('dashboard-date').textContent=new Date().toLocaleDateString('en-KE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+// ═══════════════════════════════════════════
+// DATA LAYER
+// ═══════════════════════════════════════════
+async function loadUserData(){
+  const fb=window._fb||{};
+  const uid=S.user.uid;
+  if(fb.firebaseReady){
+    try{
+      const snap=await fb.getDoc(fb.doc(fb.db,'users',uid));
+      S.schools=snap.exists()?(snap.data().schools||{}):{};
+    }catch(e){ S.schools=lsLoad(lsKey(uid,'schools'))||{}; }
+  } else {
+    S.schools=lsLoad(lsKey(uid,'schools'))||{};
+  }
+}
+
+async function persistData(){
+  const fb=window._fb||{};
+  const uid=S.user.uid;
+  lsSave(lsKey(uid,'schools'),S.schools);
+  if(fb.firebaseReady){
+    try{ await fb.setDoc(fb.doc(fb.db,'users',uid),{schools:S.schools},{merge:true}); }
+    catch(e){ console.warn('Cloud save failed, kept locally'); }
+  }
+}
+
+function refreshAll(){
+  updateDashboard();
+  renderSchoolsList();
+  populateAllSelects();
+}
+
+// ═══════════════════════════════════════════
+// SUBJECTS
+// ═══════════════════════════════════════════
+const KCSE_ALL=['Mathematics','English','Kiswahili','Biology','Chemistry','Physics',
+  'History','Geography','CRE','IRE','Business Studies','Agriculture',
+  'Computer Studies','Home Science','Art & Design','Music','French','German'];
+const CBC78=['Mathematics','English','Kiswahili','Science & Technology','Social Studies',
+  'CRE/IRE','Pre-Technical Studies','Agriculture','Life Skills','Creative Arts & Sports'];
+const CBC910=['Mathematics','English','Kiswahili','Biology','Chemistry','Physics',
+  'History & Citizenship','Geography','CRE/IRE','Computer Science','Business Studies',
+  'Agriculture','Home Science','Art & Design','Music'];
+
+function getSubjectList(curr,level){
+  if(curr==='cbc'){
+    const gr=parseInt(level.replace('Grade ',''));
+    return (gr<=8?CBC78:CBC910).slice();
+  }
+  return KCSE_ALL.slice();
+}
+
+function renderSubjectPicker(){
+  const curr=document.getElementById('class-curr').value;
+  const level=document.getElementById('class-level').value;
+  const subs=getSubjectList(curr,level);
+  subjectSelections={};
+  // Default: first 10 (or all if CBC)
+  const defaultOn=curr==='cbc'?subs:subs.slice(0,10);
+  defaultOn.forEach(s=>subjectSelections[s]=true);
+  const container=document.getElementById('subject-picker');
+  container.innerHTML=subs.map(sub=>`
+    <span class="subject-chip ${subjectSelections[sub]?'':'off'}" data-sub="${sub}" onclick="toggleSubject(this,'${sub}')">
+      ${subjectSelections[sub]?'✓':''} ${sub}
+    </span>`).join('');
+}
+
+function toggleSubject(el,sub){
+  subjectSelections[sub]=!subjectSelections[sub];
+  el.classList.toggle('off',!subjectSelections[sub]);
+  el.innerHTML=(subjectSelections[sub]?'✓ ':'')+sub;
+}
+
+// ═══════════════════════════════════════════
+// SCHOOLS CRUD
+// ═══════════════════════════════════════════
+async function saveSchool(){
+  const name=document.getElementById('school-name').value.trim();
+  if(!name){toast('Enter a school name');return}
+  const county=document.getElementById('school-county').value.trim();
+  S.schools[genId()]={name,county,classes:{},createdAt:Date.now()};
+  await persistData();
+  closeModal('school-modal');
+  document.getElementById('school-name').value='';
+  document.getElementById('school-county').value='';
+  refreshAll();
+  toast(`✅ ${name} added!`);
+}
+
+function renderSchoolsList(){
+  const container=document.getElementById('schools-list');
+  const ids=Object.keys(S.schools);
+  if(!ids.length){
+    container.innerHTML=`<div class="empty-state"><div class="icon">🏫</div><h3>No schools yet</h3><p>Click "+ New School" to begin</p></div>`;
+    return;
+  }
+  container.innerHTML=ids.map(id=>{
+    const sc=S.schools[id];
+    const cc=Object.keys(sc.classes||{}).length;
+    return `
+    <div class="school-item">
+      <div class="school-item-info">
+        <h3>${sc.name}</h3>
+        <p>${sc.county?sc.county+' · ':''}${cc} class${cc!==1?'es':''}</p>
+      </div>
+      <div class="school-item-actions">
+        <button class="btn btn-sm btn-secondary" onclick="openAddClass('${id}')">+ Class</button>
+        <button class="btn btn-sm btn-secondary" onclick="toggleClasses('${id}')">📋 View</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteSchool('${id}')">🗑</button>
+      </div>
+    </div>
+    <div id="classes-${id}" style="display:none;padding:8px 12px 14px;background:var(--k0);border:1px solid var(--k2);border-top:none;border-radius:0 0 var(--r) var(--r);margin-top:-10px">
+      ${renderClassCards(id)}
+    </div>`;
+  }).join('');
+}
+
+function renderClassCards(schoolId){
+  const cls=S.schools[schoolId].classes||{};
+  const ids=Object.keys(cls);
+  if(!ids.length) return '<p style="font-size:12px;color:var(--k4);padding:8px 0">No classes yet. Click "+ Class".</p>';
+  return `<div style="display:flex;flex-direction:column;gap:7px;margin-top:8px">`+
+    ids.map(cid=>{
+      const c=cls[cid];
+      const sc=Object.keys(c.students||{}).length;
+      return `<div style="display:flex;align-items:center;justify-content:space-between;background:white;border-radius:10px;padding:10px 14px;border:1px solid var(--k2)">
+        <div>
+          <span style="font-weight:700;font-size:13px">${c.level} — ${c.term} ${c.year}</span>
+          ${c.examName?`<span class="badge badge-amber" style="margin-left:6px">${c.examName}</span>`:''}
+          <span class="badge badge-${c.curr==='cbc'?'blue':'green'}" style="margin-left:4px">${c.curr==='cbc'?'CBC':'8-4-4'}</span>
+          <p style="font-size:11px;color:var(--k4);margin-top:2px">${(c.subjects||[]).length} subjects · ${sc} student${sc!==1?'s':''}</p>
+        </div>
+        <div style="display:flex;gap:5px">
+          <button class="btn btn-sm btn-primary" onclick="goToMarksEntry('${schoolId}','${cid}')">Marks</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteClass('${schoolId}','${cid}')">🗑</button>
+        </div>
+      </div>`;
+    }).join('')+'</div>';
+}
+
+function toggleClasses(id){
+  const el=document.getElementById(`classes-${id}`);
+  el.style.display=el.style.display==='none'?'':'none';
+}
+
+async function deleteSchool(id){
+  if(!confirm(`Delete "${S.schools[id].name}" and all data?`))return;
+  delete S.schools[id];
+  await persistData();
+  refreshAll();
+  toast('School deleted');
+}
+
+function openAddClass(schoolId){
+  document.getElementById('class-school-id').value=schoolId;
+  document.getElementById('class-modal-title').textContent=`Add Class — ${S.schools[schoolId].name}`;
+  renderSubjectPicker();
+  openModal('class-modal');
+}
+
+async function saveClass(){
+  const schoolId=document.getElementById('class-school-id').value;
+  const term=document.getElementById('class-term').value;
+  const year=document.getElementById('class-year').value;
+  const level=document.getElementById('class-level').value;
+  const curr=document.getElementById('class-curr').value;
+  const examName=document.getElementById('class-exam-name').value.trim();
+  const subjects=Object.entries(subjectSelections).filter(([,v])=>v).map(([k])=>k);
+  if(!subjects.length){toast('Select at least one subject');return}
+  if(!S.schools[schoolId].classes)S.schools[schoolId].classes={};
+  S.schools[schoolId].classes[genId()]={term,year,level,curr,examName,subjects,students:{},createdAt:Date.now()};
+  await persistData();
+  closeModal('class-modal');
+  document.getElementById('class-exam-name').value='';
+  refreshAll();
+  toast('✅ Class saved!');
+}
+
+async function deleteClass(schoolId,classId){
+  if(!confirm('Delete this class and all marks?'))return;
+  delete S.schools[schoolId].classes[classId];
+  await persistData();
+  refreshAll();
+  toast('Class deleted');
+}
+
+// ═══════════════════════════════════════════
+// SELECT SYNC
+// ═══════════════════════════════════════════
+function populateAllSelects(){
+  const ids=Object.keys(S.schools);
+  const opts='<option value="">— Select —</option>'+ids.map(id=>`<option value="${id}">${S.schools[id].name}</option>`).join('');
+  ['me-school-sel','res-school-sel','dl-school-sel','an-school-sel','ai-school-sel'].forEach(sid=>{
+    const el=document.getElementById(sid);
+    if(!el)return;
+    // preserve current selection
+    const prev=el.value;
+    el.innerHTML=opts;
+    if(prev)el.value=prev;
+  });
+  // Re-populate class dropdowns for each prefix so existing selections survive
+  ['me','res','dl','an','ai'].forEach(prefix=>{
+    const schoolSel=document.getElementById(`${prefix}-school-sel`);
+    if(schoolSel&&schoolSel.value) loadClassesFor(prefix);
+  });
+}
+
+function loadClassesFor(prefix){
+  const schoolId=document.getElementById(`${prefix}-school-sel`).value;
+  const sel=document.getElementById(`${prefix}-class-sel`);
+  sel.innerHTML='<option value="">— Select —</option>';
+  if(!schoolId)return;
+  Object.entries(S.schools[schoolId]?.classes||{}).forEach(([id,c])=>{
+    const opt=document.createElement('option');
+    opt.value=id;
+    opt.textContent=`${c.level} | ${c.term} ${c.year}${c.examName?' — '+c.examName:''}`;
+    sel.appendChild(opt);
+  });
+}
+
+// ═══════════════════════════════════════════
+// GRADING
+// ═══════════════════════════════════════════
+function getKCSEGrade(mark){
+  if(mark===null||mark===''||isNaN(mark))return null;
+  const m=Number(mark);
+  if(m>=80)return{grade:'A',pts:12};  if(m>=75)return{grade:'A-',pts:11};
+  if(m>=70)return{grade:'B+',pts:10}; if(m>=65)return{grade:'B',pts:9};
+  if(m>=60)return{grade:'B-',pts:8};  if(m>=55)return{grade:'C+',pts:7};
+  if(m>=50)return{grade:'C',pts:6};   if(m>=45)return{grade:'C-',pts:5};
+  if(m>=40)return{grade:'D+',pts:4};  if(m>=35)return{grade:'D',pts:3};
+  if(m>=30)return{grade:'D-',pts:2};  return{grade:'E',pts:1};
+}
+function getMeanGrade(pts){
+  if(!pts||isNaN(pts))return'Y';
+  if(pts>=11.5)return'A'; if(pts>=10.5)return'A-';
+  if(pts>=9.5)return'B+'; if(pts>=8.5)return'B';
+  if(pts>=7.5)return'B-'; if(pts>=6.5)return'C+';
+  if(pts>=5.5)return'C';  if(pts>=4.5)return'C-';
+  if(pts>=3.5)return'D+'; if(pts>=2.5)return'D';
+  if(pts>=1.5)return'D-'; return'E';
+}
+function getCBCLevel(mark){
+  if(mark===null||mark===''||isNaN(mark))return null;
+  const m=Number(mark);
+  if(m>=88)return'EE1'; if(m>=76)return'EE2';
+  if(m>=64)return'ME1'; if(m>=52)return'ME2';
+  if(m>=40)return'AE1'; if(m>=28)return'AE2';
+  if(m>=16)return'BE1'; return'BE2';
+}
+function calcKCSE(marks,subjects){
+  const graded=subjects.map(sub=>{
+    const g=getKCSEGrade(marks[sub]);
+    return g?{sub,mark:marks[sub],grade:g.grade,pts:g.pts}:null;
+  }).filter(Boolean);
+  if(!graded.length)return{totalPts:0,meanGrade:'Y',meanPts:'0.000',best7:[]};
+  const maths=graded.find(s=>s.sub==='Mathematics');
+  const langs=graded.filter(s=>['English','Kiswahili'].includes(s.sub)).sort((a,b)=>b.pts-a.pts);
+  const others=graded.filter(s=>s.sub!=='Mathematics'&&!['English','Kiswahili'].includes(s.sub)).sort((a,b)=>b.pts-a.pts);
+  let best7=[];
+  if(maths)best7.push(maths);
+  if(langs[0])best7.push(langs[0]);
+  best7=[...best7,...others.slice(0,5)];
+  if(best7.length<7){
+    const used=new Set(best7.map(s=>s.sub));
+    for(const g of graded){if(!used.has(g.sub)&&best7.length<7){best7.push(g);used.add(g.sub)}}
+  }
+  if(best7.length<7)return{totalPts:0,meanGrade:'Y',meanPts:'0.000',best7};
+  const totalPts=best7.reduce((s,x)=>s+x.pts,0);
+  const meanPts=totalPts/7;
+  return{totalPts,meanPts:meanPts.toFixed(3),meanGrade:getMeanGrade(meanPts),best7};
+}
+
+// ═══════════════════════════════════════════
+// MARKS TABLE
+// ═══════════════════════════════════════════
+function goToMarksEntry(schoolId,classId){
+  showPage('marks-entry');
+  document.getElementById('me-school-sel').value=schoolId;
+  loadClassesFor('me');
+  document.getElementById('me-class-sel').value=classId;
+  loadMarksTable();
+}
+
+function loadMarksTable(){
+  const schoolId=document.getElementById('me-school-sel').value;
+  const classId=document.getElementById('me-class-sel').value;
+  S.currentSchoolId=schoolId; S.currentClassId=classId;
+  if(!schoolId||!classId){document.getElementById('me-table-area').style.display='none';return}
+  const sc=S.schools[schoolId];
+  const cls=sc.classes[classId];
+  const isCBC=cls.curr==='cbc';
+  const subjects=cls.subjects||[];
+  document.getElementById('me-table-area').style.display='';
+  document.getElementById('me-table-title').textContent=`${cls.level} — ${cls.term} ${cls.year}`;
+  document.getElementById('me-breadcrumb').innerHTML=
+    `<span onclick="showPage('schools')">${sc.name}</span><span class="breadcrumb-sep">›</span><span>${cls.level} ${cls.term} ${cls.year}</span>`;
+  // Header
+  const thead=document.getElementById('marks-thead');
+  if(isCBC){
+    thead.innerHTML=`<tr><th>#</th><th>Adm No</th><th>Name</th>${subjects.map(s=>`<th>${s}</th>`).join('')}<th>Del</th></tr>`;
+  } else {
+    thead.innerHTML=`<tr><th>#</th><th>Adm No</th><th>Name</th>${subjects.map(s=>`<th>${s}</th>`).join('')}<th>Pts</th><th>Mean</th><th>Grade</th><th>Del</th></tr>`;
+  }
+  renderMarksRows(schoolId,classId);
+}
+
+function renderMarksRows(schoolId,classId){
+  const cls=S.schools[schoolId].classes[classId];
+  const isCBC=cls.curr==='cbc';
+  const subjects=cls.subjects||[];
+  const students=Object.entries(cls.students||{});
+  const tbody=document.getElementById('marks-tbody');
+  if(!students.length){
+    tbody.innerHTML=`<tr><td colspan="99" style="text-align:center;padding:20px;color:var(--k4)">No students. Click "+ Student" or "📂 Import CSV"</td></tr>`;
+    return;
+  }
+  tbody.innerHTML=students.map(([sid,stu],idx)=>{
+    const marksInputs=subjects.map(sub=>{
+      const val=stu.marks?.[sub]??'';
+      if(isCBC){
+        const lvl=getCBCLevel(val);
+        return `<td><input type="number" min="0" max="100" value="${val}" data-stu="${sid}" data-sub="${sub}" oninput="onMarkInput(this)"/>
+          ${lvl?`<br><span style="font-size:9px;color:var(--g7);font-weight:700">${lvl}</span>`:''}
+        </td>`;
+      } else {
+        const g=getKCSEGrade(val);
+        return `<td><input type="number" min="0" max="100" value="${val}" data-stu="${sid}" data-sub="${sub}" oninput="onMarkInput(this)"/>
+          ${g?`<br><span class="grade-badge grade-${g.grade[0]}" style="font-size:9px">${g.grade}</span>`:''}
+        </td>`;
+      }
+    }).join('');
+    let extraCols='';
+    if(!isCBC){
+      const res=calcKCSE(stu.marks||{},subjects);
+      extraCols=`<td style="font-weight:700">${res.totalPts}</td>
+        <td style="font-weight:700">${res.meanPts}</td>
+        <td><span class="grade-badge grade-${res.meanGrade[0]}">${res.meanGrade}</span></td>`;
+    }
+    return `<tr>
+      <td>${idx+1}</td>
+      <td><input type="text" value="${stu.admNo||''}" data-stu="${sid}" data-field="admNo" onchange="onFieldChange(this)" style="width:65px"/></td>
+      <td><input type="text" value="${stu.name||''}" data-stu="${sid}" data-field="name" onchange="onFieldChange(this)" style="min-width:130px"/></td>
+      ${marksInputs}${extraCols}
+      <td><button class="btn btn-xs btn-danger" onclick="deleteStudent('${sid}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function onMarkInput(input){
+  const cls=S.schools[S.currentSchoolId].classes[S.currentClassId];
+  const sid=input.dataset.stu, sub=input.dataset.sub;
+  if(!cls.students[sid].marks)cls.students[sid].marks={};
+  cls.students[sid].marks[sub]=input.value===''?null:Number(input.value);
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer=setTimeout(()=>saveMarks(true),1800);
+}
+
+function onFieldChange(input){
+  const cls=S.schools[S.currentSchoolId].classes[S.currentClassId];
+  cls.students[input.dataset.stu][input.dataset.field]=input.value;
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer=setTimeout(()=>saveMarks(true),1800);
+}
+
+function addStudentRow(){
+  const {currentSchoolId:schoolId,currentClassId:classId}=S;
+  if(!schoolId||!classId){toast('Select a class first');return}
+  S.schools[schoolId].classes[classId].students[genId()]={name:'',admNo:'',marks:{}};
+  renderMarksRows(schoolId,classId);
+  const inputs=document.querySelectorAll('#marks-tbody td input[data-field="name"]');
+  if(inputs.length)inputs[inputs.length-1].focus();
+}
+
+function deleteStudent(sid){
+  delete S.schools[S.currentSchoolId].classes[S.currentClassId].students[sid];
+  renderMarksRows(S.currentSchoolId,S.currentClassId);
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer=setTimeout(()=>saveMarks(true),600);
+}
+
+async function saveMarks(silent=false){
+  await persistData();
+  updateDashboard();
+  if(!silent){toast('✅ Marks saved!');}
+  else{
+    const btn=document.getElementById('save-btn');
+    if(btn){btn.textContent='✓ Saved';setTimeout(()=>{btn.textContent='💾 Save'},1600)}
+  }
+}
+
+// ═══════════════════════════════════════════
+// CSV IMPORT
+// ═══════════════════════════════════════════
+document.getElementById('csv-drop').addEventListener('dragover',e=>{e.preventDefault();e.currentTarget.classList.add('drag')});
+document.getElementById('csv-drop').addEventListener('dragleave',e=>e.currentTarget.classList.remove('drag'));
+document.getElementById('csv-drop').addEventListener('drop',e=>{
+  e.preventDefault();e.currentTarget.classList.remove('drag');
+  const f=e.dataTransfer.files[0];if(f)processCSV(f);
+});
+
+function handleCSVFile(input){if(input.files[0])processCSV(input.files[0])}
+
+function processCSV(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.trim().split('\n');
+    csvParsed=[];
+    let start=0;
+    // Skip header if first line contains non-numeric first column
+    if(lines.length&&isNaN(lines[0].split(',')[0].trim()))start=1;
+    for(let i=start;i<lines.length;i++){
+      const parts=lines[i].split(',');
+      if(parts.length>=2){
+        const admNo=parts[0].trim();
+        const name=parts.slice(1).join(',').trim().replace(/^"|"$/g,'');
+        if(name)csvParsed.push({admNo,name});
+      }
+    }
+    const preview=document.getElementById('csv-preview');
+    if(!csvParsed.length){preview.innerHTML='<div class="msg msg-error">No valid rows found. Check format.</div>';return}
+    preview.innerHTML=`<div class="msg msg-success">✅ Found ${csvParsed.length} students. Preview:</div>
+      <div style="max-height:150px;overflow-y:auto;margin-top:8px">
+      ${csvParsed.slice(0,5).map(s=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--k1)">${s.admNo} — ${s.name}</div>`).join('')}
+      ${csvParsed.length>5?`<div style="font-size:11px;color:var(--k4);padding:4px 0">...and ${csvParsed.length-5} more</div>`:''}
+      </div>`;
+    document.getElementById('csv-import-btn').style.display='';
+  };
+  reader.readAsText(file);
+}
+
+async function importCSVStudents(){
+  const {currentSchoolId:schoolId,currentClassId:classId}=S;
+  if(!schoolId||!classId){toast('Select a class first, then import');closeModal('csv-modal');return}
+  if(!csvParsed.length){toast('No data to import');return}
+  const cls=S.schools[schoolId].classes[classId];
+  let added=0,skipped=0;
+  const existingNames=new Set(Object.values(cls.students).map(s=>s.name.toLowerCase()));
+  csvParsed.forEach(({admNo,name})=>{
+    if(existingNames.has(name.toLowerCase())){skipped++;return}
+    cls.students[genId()]={admNo,name,marks:{}};
+    added++;
+  });
+  await persistData();
+  closeModal('csv-modal');
+  renderMarksRows(schoolId,classId);
+  updateDashboard();
+  toast(`✅ Imported ${added} students${skipped?` (${skipped} skipped, already exist)`:''}`);
+  csvParsed=[];
+  document.getElementById('csv-preview').innerHTML='';
+  document.getElementById('csv-import-btn').style.display='none';
+  document.getElementById('csv-file-input').value='';
+}
+
+// ═══════════════════════════════════════════
+// RESULTS
+// ═══════════════════════════════════════════
+function getRanked(schoolId,classId){
+  const sc=S.schools[schoolId];
+  if(!sc)return[];
+  const cls=sc.classes&&sc.classes[classId];
+  if(!cls)return[];
+  const isCBC=cls.curr==='cbc';
+  const subjects=cls.subjects||[];
+  const students=cls.students||{};
+  let ranked=Object.entries(students).map(([sid,stu])=>{
+    if(isCBC){
+      const count=subjects.filter(sub=>getCBCLevel(stu.marks?.[sub])!==null).length;
+      return{sid,stu,isCBC:true,sort:count,totalPts:0,meanPts:'—',meanGrade:'—'};
+    }
+    const res=calcKCSE(stu.marks||{},subjects);
+    const sortVal=parseFloat(res.meanPts);
+    return{sid,stu,...res,sort:isNaN(sortVal)?0:sortVal};
+  }).sort((a,b)=>b.sort-a.sort);
+  let pos=1;
+  ranked.forEach((r,i)=>{
+    if(i>0&&r.sort===ranked[i-1].sort)r.position=ranked[i-1].position;
+    else r.position=pos;
+    pos=i+2;
+  });
+  return ranked;
+}
+
+function showResults(){
+  const schoolId=document.getElementById('res-school-sel').value;
+  const classId=document.getElementById('res-class-sel').value;
+  const area=document.getElementById('results-area');
+  if(!schoolId||!classId){area.innerHTML=`<div class="empty-state"><div class="icon">🏆</div><h3>Select a class to view results</h3></div>`;return}
+  const sc=S.schools[schoolId];
+  const cls=sc.classes[classId];
+  const isCBC=cls.curr==='cbc';
+  const subjects=cls.subjects||[];
+  const ranked=getRanked(schoolId,classId);
+  if(!ranked.length){area.innerHTML=`<div class="empty-state"><div class="icon">📋</div><h3>No students</h3></div>`;return}
+  area.innerHTML=`<div class="card">
+    <div class="card-header">
+      <h2>${sc.name} · ${cls.level} | ${cls.term} ${cls.year}</h2>
+      <span class="badge badge-green">${ranked.length} students</span>
+    </div>
+    <div class="marks-table-wrap"><table>
+      <thead><tr>
+        <th>Pos</th><th>Adm</th><th>Name</th>
+        ${isCBC?subjects.map(s=>`<th>${s.length>8?s.slice(0,8)+'…':s}</th>`).join(''):subjects.map(s=>`<th>${s.length>8?s.slice(0,8)+'…':s}</th>`).join('')+'<th>Pts</th><th>Mean</th><th>Grade</th>'}
+      </tr></thead>
+      <tbody>
+        ${ranked.map(r=>{
+          const stu=r.stu;
+          const subCols=subjects.map(sub=>{
+            const m=stu.marks?.[sub];
+            if(isCBC){const lvl=getCBCLevel(m);return`<td>${m??'-'}${lvl?` <span style="font-size:9px;color:var(--g7);font-weight:700">${lvl}</span>`:''}</td>`}
+            const g=getKCSEGrade(m);
+            return`<td>${m??'-'}${g?` <span class="grade-badge grade-${g.grade[0]}" style="font-size:9px">${g.grade}</span>`:''}</td>`;
+          }).join('');
+          return`<tr>
+            <td><strong>${r.position}</strong></td>
+            <td>${stu.admNo||'-'}</td>
+            <td><strong>${stu.name||'-'}</strong></td>
+            ${subCols}
+            ${!isCBC?`<td><strong>${r.totalPts}</strong></td><td>${r.meanPts}</td><td><span class="grade-badge grade-${r.meanGrade[0]}">${r.meanGrade}</span></td>`:''}
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════
+// CLASS ANALYSIS (NEW)
+// ═══════════════════════════════════════════
+function showAnalysis(){
+  const schoolId=document.getElementById('an-school-sel').value;
+  const classId=document.getElementById('an-class-sel').value;
+  const area=document.getElementById('analysis-area');
+  if(!schoolId||!classId){area.innerHTML=`<div class="empty-state"><div class="icon">📈</div><h3>Select a class</h3></div>`;return}
+  const sc=S.schools[schoolId];
+  const cls=sc.classes[classId];
+  const subjects=cls.subjects||[];
+  const ranked=getRanked(schoolId,classId);
+  if(!ranked.length){area.innerHTML=`<div class="empty-state"><div class="icon">📋</div><h3>No students in this class</h3></div>`;return}
+  const isCBC=cls.curr==='cbc';
+
+  // Grade distribution (KCSE only)
+  let gradeDistHTML='';
+  if(!isCBC){
+    const grades=['A','A-','B+','B','B-','C+','C','C-','D+','D','D-','E','Y'];
+    const gradeColors={'A':'#166534','A-':'#15803d','B+':'#1d4ed8','B':'#2563eb','B-':'#3b82f6','C+':'#d97706','C':'#f59e0b','C-':'#f97316','D+':'#dc2626','D':'#ef4444','D-':'#b91c1c','E':'#6b7280','Y':'#9ca3af'};
+    const dist={};
+    grades.forEach(g=>dist[g]=0);
+    ranked.forEach(r=>{if(r.meanGrade)dist[r.meanGrade]=(dist[r.meanGrade]||0)+1});
+    const max=Math.max(...Object.values(dist),1);
+    gradeDistHTML=`<div class="card" style="margin-bottom:14px">
+      <div class="card-header"><h2>Grade Distribution</h2></div>
+      <div class="card-body">
+        <div class="chart-bar-wrap">
+          ${grades.map(g=>{
+            const count=dist[g]||0;
+            const pct=Math.round((count/max)*100);
+            return`<div class="chart-row">
+              <div class="chart-label">${g}</div>
+              <div class="chart-bar-bg"><div class="chart-bar" style="width:${pct}%;background:${gradeColors[g]||'#6b7280'}">${count>0?count:''}</div></div>
+              <div class="chart-count">${count}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Subject averages
+  const subAvgs=subjects.map(sub=>{
+    const marks=ranked.map(r=>r.stu.marks?.[sub]).filter(m=>m!==null&&m!==undefined&&m!=='');
+    const avg=marks.length?marks.reduce((a,b)=>a+Number(b),0)/marks.length:null;
+    return{sub,avg,count:marks.length};
+  }).sort((a,b)=>(b.avg||0)-(a.avg||0));
+
+  const maxAvg=Math.max(...subAvgs.map(s=>s.avg||0),1);
+  const subAvgHTML=`<div class="card" style="margin-bottom:14px">
+    <div class="card-header"><h2>Subject Averages</h2></div>
+    <div class="card-body">
+      <div class="chart-bar-wrap">
+        ${subAvgs.map(s=>{
+          const pct=s.avg?Math.round((s.avg/maxAvg)*100):0;
+          const col=s.avg>=50?'var(--g6)':s.avg>=40?'var(--amber)':'var(--red)';
+          return`<div class="chart-row">
+            <div class="chart-label" style="width:90px;font-size:10px;text-align:right">${s.sub.length>10?s.sub.slice(0,10)+'…':s.sub}</div>
+            <div class="chart-bar-bg"><div class="chart-bar" style="width:${pct}%;background:${col}">${s.avg?s.avg.toFixed(1):'-'}</div></div>
+            <div class="chart-count" style="width:40px;font-size:11px">${s.count} sat</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  // Summary stats
+  const allMeanPts=ranked.filter(r=>r.meanPts&&r.meanPts!=='0.000').map(r=>parseFloat(r.meanPts));
+  const classMean=allMeanPts.length?(allMeanPts.reduce((a,b)=>a+b,0)/allMeanPts.length).toFixed(3):'—';
+  const top=ranked[0];
+  const bottom=ranked[ranked.length-1];
+
+  const summaryHTML=`<div class="analysis-grid" style="margin-bottom:14px">
+    <div class="stat-card" style="text-align:left;padding:16px">
+      <div class="stat-num" style="font-size:20px">${classMean}</div>
+      <div class="stat-label">Class Mean Pts</div>
+      ${!isCBC?`<div style="margin-top:6px"><span class="grade-badge grade-${getMeanGrade(parseFloat(classMean))[0]}" style="font-size:13px">${getMeanGrade(parseFloat(classMean))}</span></div>`:''}
+    </div>
+    <div class="stat-card" style="text-align:left;padding:16px">
+      <div class="stat-num" style="font-size:16px">${ranked.length}</div>
+      <div class="stat-label">Total Students</div>
+      <div style="margin-top:6px;font-size:11px;color:var(--k6)">${subjects.length} subjects</div>
+    </div>
+    ${!isCBC?`
+    <div class="stat-card" style="text-align:left;padding:16px">
+      <p style="font-size:11px;font-weight:700;color:var(--g7);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">🥇 Top Student</p>
+      <p style="font-size:14px;font-weight:700">${top?.stu?.name||'—'}</p>
+      <p style="font-size:12px;color:var(--k6)">${top?.meanPts||'—'} pts · <strong>${top?.meanGrade||'—'}</strong></p>
+    </div>
+    <div class="stat-card" style="text-align:left;padding:16px">
+      <p style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📊 Needs Support</p>
+      <p style="font-size:14px;font-weight:700">${bottom?.stu?.name||'—'}</p>
+      <p style="font-size:12px;color:var(--k6)">${bottom?.meanPts||'—'} pts · <strong>${bottom?.meanGrade||'—'}</strong></p>
+    </div>`:''}
+  </div>`;
+
+  area.innerHTML=summaryHTML+gradeDistHTML+subAvgHTML;
+}
+
+// ═══════════════════════════════════════════
+// AI REMARKS (NEW — uses Anthropic API)
+// ═══════════════════════════════════════════
+function loadStudentsForAI(){
+  const schoolId=document.getElementById('ai-school-sel').value;
+  const classId=document.getElementById('ai-class-sel').value;
+  const sel=document.getElementById('ai-student-sel');
+  sel.innerHTML='<option value="">— Select Student —</option>';
+  if(!schoolId||!classId)return;
+  const cls=S.schools[schoolId].classes[classId];
+  Object.entries(cls.students||{}).forEach(([sid,stu])=>{
+    const opt=document.createElement('option');
+    opt.value=`${schoolId}||${classId}||${sid}`;
+    opt.textContent=`${stu.name||'(no name)'} ${stu.admNo?'- '+stu.admNo:''}`;
+    sel.appendChild(opt);
+  });
+}
+
+async function generateRemarks(){
+  const val=document.getElementById('ai-student-sel').value;
+  const output=document.getElementById('ai-output');
+  if(!val){toast('Select a student first');return}
+  const [schoolId,classId,sid]=val.split('||');
+  const sc=S.schools[schoolId];
+  const cls=sc.classes[classId];
+  const stu=cls.students[sid];
+  const subjects=cls.subjects||[];
+  const isCBC=cls.curr==='cbc';
+  const res=isCBC?null:calcKCSE(stu.marks||{},subjects);
+
+  // Build performance summary for AI
+  const marksText=subjects.map(sub=>{
+    const m=stu.marks?.[sub];
+    if(m===null||m===undefined||m==='')return null;
+    if(isCBC){const lvl=getCBCLevel(m);return`${sub}: ${m}% (${lvl||'—'})`}
+    const g=getKCSEGrade(m);return`${sub}: ${m} marks (${g?g.grade:'—'})`;
+  }).filter(Boolean).join(', ');
+
+  const summary=isCBC
+    ?`Student: ${stu.name||'Student'}. CBC curriculum. Subject performance: ${marksText||'No marks entered'}.`
+    :`Student: ${stu.name||'Student'}. KCSE 8-4-4. Mean grade: ${res.meanGrade} (${res.meanPts} points). Subject performance: ${marksText||'No marks entered'}. Position in class not calculated here.`;
+
+  output.innerHTML=`<div class="ai-thinking" style="margin-top:12px"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>Generating remarks…</span></div>`;
+
+  try{
+    const response=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:`You are an experienced Kenyan secondary school teacher writing student progress report remarks. Write warm, professional, constructive remarks in 2-3 sentences. Be specific to the performance data given. For weak performance: be encouraging but honest. For strong performance: praise and motivate. Always end with a motivating statement. Do not use generic filler phrases. Write only the remarks text — no labels, no "Remarks:" prefix.`,
+        messages:[{role:'user',content:`Write teacher remarks for this student's report form:\n\n${summary}`}]
+      })
+    });
+    const data=await response.json();
+    const text=data.content?.[0]?.text||'Could not generate remarks.';
+    output.innerHTML=`<div class="remark-card">
+      <p style="font-size:11px;font-weight:700;color:var(--g8);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">✨ AI-Generated Remarks for ${stu.name||'Student'}</p>
+      <p>${text}</p>
+      <button class="btn btn-sm btn-secondary" style="margin-top:10px" onclick="copyRemarks(this,'${text.replace(/'/g,"\\'")}')">📋 Copy</button>
+    </div>`;
+  }catch(e){
+    output.innerHTML=`<div class="msg msg-error">⚠️ Could not generate remarks. Check internet connection. Error: ${e.message}</div>`;
+  }
+}
+
+function copyRemarks(btn,text){
+  navigator.clipboard.writeText(text).then(()=>{btn.textContent='✅ Copied!';setTimeout(()=>btn.textContent='📋 Copy',2000)});
+}
+
+// ═══════════════════════════════════════════
+// DOWNLOADS
+// ═══════════════════════════════════════════
+function getDownloadData(){
+  const schoolId=document.getElementById('dl-school-sel').value;
+  const classId=document.getElementById('dl-class-sel').value;
+  if(!schoolId){toast('⚠️ Please select a school first');return null}
+  if(!classId){toast('⚠️ Please select a class first');return null}
+  const sc=S.schools[schoolId];
+  if(!sc){toast('School not found');return null}
+  const cls=sc.classes&&sc.classes[classId];
+  if(!cls){toast('Class not found');return null}
+  const subjects=cls.subjects||[];
+  const students=cls.students||{};
+  if(!Object.keys(students).length){toast('⚠️ No students in this class');return null}
+  const ranked=getRanked(schoolId,classId);
+  return{sc,cls,subjects,ranked};
+}
+
+function downloadMeritPDF(){
+  const d=getDownloadData();if(!d)return;
+  const{sc,cls,subjects,ranked}=d;
+  const isCBC=cls.curr==='cbc';
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <title>Merit List - ${sc.name}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;font-size:10px;margin:16px;color:#111}
+    h1{font-size:15px;text-align:center;color:#1a7a3c;margin-bottom:2px}
+    h2{font-size:12px;text-align:center;margin-bottom:2px;font-weight:normal}
+    p.sub{text-align:center;font-size:9px;color:#666;margin-bottom:14px;margin-top:2px}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th{background:#1a7a3c;color:white;padding:6px 7px;font-size:9px;text-align:left;border:1px solid #155d2d}
+    td{padding:4px 7px;border:1px solid #ddd;font-size:10px}
+    tr:nth-child(even)td{background:#f6fff9}
+    .g{font-weight:700;color:#1a7a3c}
+    @media print{body{margin:8px}@page{margin:10mm}}
+  </style></head><body>
+  <h1>${sc.name}${sc.county?' — '+sc.county+' County':''}</h1>
+  <h2>MERIT LIST &nbsp;|&nbsp; ${cls.level} &nbsp;|&nbsp; ${cls.term} ${cls.year}${cls.examName?' &nbsp;|&nbsp; '+cls.examName:''}</h2>
+  <p class="sub">Generated by Agunextech Academic Analysis System &nbsp;·&nbsp; ${new Date().toLocaleDateString('en-KE',{day:'numeric',month:'long',year:'numeric'})}</p>
+  <table><thead><tr>
+    <th>Pos</th><th>Adm No</th><th>Student Name</th>
+    ${subjects.map(s=>`<th>${s}</th>`).join('')}
+    ${isCBC?'':`<th>Total Pts</th><th>Mean Pts</th><th>Mean Grade</th>`}
+  </tr></thead><tbody>
+    ${ranked.map(r=>{
+      const stu=r.stu||{};
+      const subCols=subjects.map(sub=>{
+        const m=stu.marks&&stu.marks[sub]!=null?stu.marks[sub]:'—';
+        if(isCBC){const lvl=getCBCLevel(m);return`<td>${m}${lvl?' ('+lvl+')':''}</td>`}
+        const g=getKCSEGrade(m);
+        return`<td>${m}${g?' ('+g.grade+')':''}</td>`;
+      }).join('');
+      return`<tr>
+        <td><strong>${r.position||'—'}</strong></td>
+        <td>${stu.admNo||'—'}</td>
+        <td><strong>${stu.name||'—'}</strong></td>
+        ${subCols}
+        ${isCBC?'':`<td class="g">${r.totalPts??'—'}</td><td>${r.meanPts||'—'}</td><td class="g">${r.meanGrade||'—'}</td>`}
+      </tr>`;
+    }).join('')}
+  </tbody></table>
+  <p style="margin-top:16px;font-size:9px;color:#999;text-align:right">Total Students: ${ranked.length} &nbsp;|&nbsp; Printed: ${new Date().toLocaleString('en-KE')}</p>
+  <script>setTimeout(()=>window.print(),400);<\/script>
+  </body></html>`;
+  openPrintWindow(html);
+}
+
+function downloadMeritCSV(){
+  const d=getDownloadData();if(!d)return;
+  const{sc,cls,subjects,ranked}=d;
+  const header=['Position','Adm No','Name',...subjects,'Total Pts','Mean Pts','Mean Grade'];
+  const rows=ranked.map(r=>[r.position,r.stu.admNo||'',r.stu.name||'',...subjects.map(sub=>r.stu.marks?.[sub]??''),r.totalPts,r.meanPts,r.meanGrade]);
+  const csv=[header,...rows].map(row=>row.map(c=>`"${c}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download=`MeritList_${sc.name.replace(/\s/g,'_')}_${cls.level}_${cls.year}.csv`;
+  a.click();
+  toast('📊 CSV downloaded!');
+}
+
+function buildReportHTML(sc,cls,subjects,r){
+  const stu=r.stu;
+  const isCBC=cls.curr==='cbc';
+  return`<div style="font-family:Arial;font-size:11px;padding:20px;max-width:680px;margin:0 auto;page-break-after:always">
+    <div style="text-align:center;border-bottom:2px solid #1a7a3c;padding-bottom:10px;margin-bottom:14px">
+      <h1 style="font-size:18px;color:#1a7a3c;margin:0">${sc.name}</h1>
+      ${sc.county?`<p style="margin:2px 0;font-size:11px;color:#555">${sc.county} County</p>`:''}
+      <h2 style="font-size:13px;margin:6px 0">STUDENT PROGRESS REPORT</h2>
+      <p style="font-size:11px;color:#555;margin:0">${cls.level} &nbsp;|&nbsp; ${cls.term} ${cls.year}${cls.examName?' &nbsp;|&nbsp; '+cls.examName:''}</p>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:12px;border:1px solid #ccc">
+      <tr style="background:#f3f4f6">
+        <td style="padding:6px 10px;font-size:11px"><strong>Name:</strong> ${stu.name||'—'}</td>
+        <td style="padding:6px 10px;font-size:11px"><strong>Adm No:</strong> ${stu.admNo||'—'}</td>
+        <td style="padding:6px 10px;font-size:11px"><strong>Class:</strong> ${cls.level}</td>
+        <td style="padding:6px 10px;font-size:11px"><strong>Position:</strong> ${r.position}</td>
+      </tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #ccc;margin-bottom:12px">
+      <thead><tr style="background:#1a7a3c;color:white">
+        <th style="padding:7px 10px;text-align:left">Subject</th>
+        <th style="padding:7px 10px">Marks</th>
+        <th style="padding:7px 10px">${isCBC?'Level':'Grade'}</th>
+        ${!isCBC?'<th style="padding:7px 10px">Points</th>':''}
+      </tr></thead>
+      <tbody>
+        ${subjects.map((sub,i)=>{
+          const m=stu.marks?.[sub];
+          if(isCBC){const lvl=getCBCLevel(m);return`<tr style="background:${i%2?'#f9f9f9':'white'}"><td style="padding:5px 10px">${sub}</td><td style="padding:5px 10px;text-align:center">${m??'—'}</td><td style="padding:5px 10px;text-align:center;font-weight:700;color:#1a7a3c">${lvl||'—'}</td></tr>`}
+          const g=getKCSEGrade(m);
+          return`<tr style="background:${i%2?'#f9f9f9':'white'}"><td style="padding:5px 10px">${sub}</td><td style="padding:5px 10px;text-align:center">${m??'—'}</td><td style="padding:5px 10px;text-align:center;font-weight:700">${g?g.grade:'—'}</td><td style="padding:5px 10px;text-align:center">${g?g.pts:'—'}</td></tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    ${!isCBC?`<table style="width:100%;border-collapse:collapse;border:1px solid #ccc;margin-bottom:14px">
+      <tr style="background:#e6f7ec">
+        <td style="padding:8px 12px;font-size:12px"><strong>Total Points:</strong> ${r.totalPts||'—'}</td>
+        <td style="padding:8px 12px;font-size:12px"><strong>Mean Points:</strong> ${r.meanPts||'—'}</td>
+        <td style="padding:8px 12px;font-size:14px"><strong>Mean Grade: ${r.meanGrade||'—'}</strong></td>
+      </tr>
+    </table>`:''}
+    <div style="margin-bottom:10px">
+      <p style="font-size:11px;font-weight:700;margin-bottom:4px">Class Teacher's Remarks:</p>
+      <div style="border:1px solid #ccc;min-height:44px;padding:6px;border-radius:4px;font-size:11px;color:#888">_______________________________________________________________</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-top:24px">
+      <div style="border-top:1px solid #333;padding-top:4px;font-size:10px;color:#555">Class Teacher<br>Signature & Date</div>
+      <div style="border-top:1px solid #333;padding-top:4px;font-size:10px;color:#555">Principal<br>Signature & Stamp</div>
+      <div style="border-top:1px solid #333;padding-top:4px;font-size:10px;color:#555">Parent/Guardian<br>Signature & Date</div>
+    </div>
+  </div>`;
+}
+
+// Safe print window helper — avoids popup blocker issues
+function openPrintWindow(html){
+  try{
+    const w=window.open('','_blank');
+    if(!w){toast('⚠️ Pop-up blocked! Allow pop-ups for this page, then try again.');return}
+    w.document.open();w.document.write(html);w.document.close();
+  }catch(e){
+    // Fallback: open as blob URL in same tab
+    const blob=new Blob([html],{type:'text/html'});
+    const url=URL.createObjectURL(blob);
+    window.open(url,'_blank');
+  }
+}
+
+function downloadAllReports(){
+  const d=getDownloadData();if(!d)return;
+  const{sc,cls,subjects,ranked}=d;
+  const pages=ranked.map(r=>buildReportHTML(sc,cls,subjects,r)).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <style>body{margin:0}@page{margin:10mm}@media print{body{margin:0}}</style>
+  </head><body>${pages}
+  <script>setTimeout(()=>window.print(),400);<\/script></body></html>`;
+  openPrintWindow(html);
+}
+
+function openSingleReport(){
+  const schoolId=document.getElementById('dl-school-sel').value;
+  const classId=document.getElementById('dl-class-sel').value;
+  if(!schoolId){toast('Select a school first');return}
+  if(!classId){toast('Select a class first');return}
+  const cls=S.schools[schoolId]?.classes?.[classId];
+  if(!cls){toast('Class not found');return}
+  const students=Object.entries(cls.students||{});
+  if(!students.length){toast('No students in this class');return}
+  const sel=document.getElementById('dl-student-sel');
+  sel.innerHTML=students.map(([sid,stu])=>
+    `<option value="${sid}">${stu.name||'(no name)'} ${stu.admNo?'— '+stu.admNo:''}</option>`).join('');
+  document.getElementById('dl-student-pick').style.display='';
+}
+
+function printOneReport(){
+  const schoolId=document.getElementById('dl-school-sel').value;
+  const classId=document.getElementById('dl-class-sel').value;
+  const stuId=document.getElementById('dl-student-sel').value;
+  if(!stuId){toast('Select a student');return}
+  const sc=S.schools[schoolId];
+  const cls=sc.classes[classId];
+  const subjects=cls.subjects||[];
+  const stu=cls.students[stuId];
+  const ranked=getRanked(schoolId,classId);
+  const r=ranked.find(x=>x.sid===stuId)||{stu,position:'—',totalPts:0,meanPts:'—',meanGrade:'—'};
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <style>body{margin:0}@page{margin:12mm}@media print{body{margin:0}}</style>
+  </head><body>${buildReportHTML(sc,cls,subjects,r)}
+  <script>setTimeout(()=>window.print(),400);<\/script></body></html>`;
+  openPrintWindow(html);
+}
+
+// ═══════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════
+function updateDashboard(){
+  let schools=0,classes=0,students=0,exams=0;
+  Object.values(S.schools).forEach(sc=>{
+    schools++;
+    Object.values(sc.classes||{}).forEach(cls=>{
+      classes++;exams++;
+      students+=Object.keys(cls.students||{}).length;
+    });
+  });
+  document.getElementById('stat-schools').textContent=schools;
+  document.getElementById('stat-classes').textContent=classes;
+  document.getElementById('stat-students').textContent=students;
+  document.getElementById('stat-exams').textContent=exams;
+
+  const actEl=document.getElementById('recent-activity');
+  const items=[];
+  Object.entries(S.schools).forEach(([sid,sc])=>{
+    Object.entries(sc.classes||{}).forEach(([cid,cls])=>{
+      items.push({school:sc.name,cls,schoolId:sid,classId:cid,ts:cls.createdAt||0});
+    });
+  });
+  items.sort((a,b)=>b.ts-a.ts);
+  if(!items.length){
+    actEl.innerHTML=`<div class="empty-state"><div class="icon">📋</div><h3>No classes yet</h3><p>Add a school to get started</p><button class="btn btn-primary" style="width:auto" onclick="showPage('schools')">+ Add School</button></div>`;
+    return;
+  }
+  actEl.innerHTML=items.slice(0,6).map(item=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--k1)">
+      <div>
+        <p style="font-size:13px;font-weight:700">${item.school} — ${item.cls.level}</p>
+        <p style="font-size:11px;color:var(--k4)">${item.cls.term} ${item.cls.year} · ${Object.keys(item.cls.students||{}).length} students · <span class="badge badge-${item.cls.curr==='cbc'?'blue':'green'}">${item.cls.curr==='cbc'?'CBC':'8-4-4'}</span></p>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="goToMarksEntry('${item.schoolId}','${item.classId}')">Open</button>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t.dataset.page===id));
+  // Always refresh school selects when switching to data tabs
+  if(['results','downloads','analysis'].includes(id)){
+    populateAllSelects();
+    if(id==='downloads'){
+      document.getElementById('dl-student-pick').style.display='none';
+    }
+  }
+}
+document.querySelectorAll('.nav-tab').forEach(tab=>tab.addEventListener('click',()=>showPage(tab.dataset.page)));
+
+// ═══════════════════════════════════════════
+// PWA
+// ═══════════════════════════════════════════
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('install-banner').classList.add('show')});
+document.getElementById('install-btn').addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('install-banner').classList.remove('show')});
+document.getElementById('dismiss-install').addEventListener('click',()=>document.getElementById('install-banner').classList.remove('show'));
+
+if('serviceWorker' in navigator){
+  const swCode=`const C='aas-v2';const A=[location.pathname];self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>r))))`;
+  const blob=new Blob([swCode],{type:'application/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+const manifest={name:'Agunextech AAS',short_name:'AAS',start_url:location.href,display:'standalone',theme_color:'#1a7a3c',background_color:'#f0fbf4',icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>",sizes:'192x192',type:'image/svg+xml'}]};
+const mBlob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+document.getElementById('manifest-link').href=URL.createObjectURL(mBlob);
+document.getElementById('manifest-link').rel='manifest';
+
+// ═══════════════════════════════════════════
+// FIREBASE AUTH LISTENER
+// ═══════════════════════════════════════════
+window.addEventListener('firebase-ready',()=>{
+  const fb=window._fb||{};
+  if(!fb.firebaseReady)return;
+  fb.onAuthStateChanged(fb.auth,user=>{if(user)onUserLoggedIn(user)});
+});
+
+// Init
