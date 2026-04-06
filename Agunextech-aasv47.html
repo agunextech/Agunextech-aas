@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="theme-color" content="#1a7a3c"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>Agunextech AAS</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+
+<!-- Firebase — defer ensures page loads first, scripts load after -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js" defer></script>
+<!-- jsPDF — saves real PDF files directly to phone Downloads folder -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Plus Jakarta Sans',sans-serif;background:#f0fbf4;color:#111827;-webkit-font-smoothing:antialiased}
+:root{
+  --green:#22963f;--green-dark:#1a7a3c;--green-deeper:#0d4a21;
+  --green-light:#e6f7ec;--green-pale:#f0fbf4;
+  --white:#fff;--gray-50:#f9fafb;--gray-100:#f3f4f6;
+  --gray-200:#e5e7eb;--gray-400:#9ca3af;--gray-600:#4b5563;--gray-900:#111827;
+  --red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
+  --shadow:0 1px 4px rgba(0,0,0,.08);--shadow-md:0 4px 16px rgba(0,0,0,.10);
+  --shadow-lg:0 12px 40px rgba(0,0,0,.15);--radius:14px;--radius-sm:8px;
+}
+
+/* ── SCREENS ── */
+.screen{display:none!important}
+.screen.active{display:flex!important;flex-direction:column;min-height:100vh}
+
+/* ── AUTH ── */
+#auth-screen{
+  background:linear-gradient(145deg,#0d4a21 0%,#1a7a3c 55%,#2db84f 100%);
+  align-items:center;justify-content:center;padding:20px;
+}
+.auth-card{
+  background:#fff;border-radius:24px;padding:32px 28px;
+  width:100%;max-width:400px;box-shadow:var(--shadow-lg);
+}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.auth-logo-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#22963f,#0d4a21);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.auth-logo h1{font-size:17px;font-weight:800;color:#155d2d;line-height:1.1}
+.auth-logo p{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em}
+
+/* Demo bar */
+.demo-bar{background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:12px;margin-bottom:16px}
+.demo-bar p{font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px}
+.demo-creds{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.demo-cred{background:#fff;border-radius:6px;padding:5px 8px;font-size:11px;color:#78350f;border:1px solid #fcd34d}
+.demo-cred strong{display:block;font-size:9px;text-transform:uppercase;color:#92400e}
+.btn-demo{width:100%;background:#f59e0b;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;padding:11px;border:none;border-radius:8px;cursor:pointer}
+.btn-demo:active{background:#d97706}
+
+/* Tabs */
+.auth-tabs{display:flex;background:#f3f4f6;border-radius:8px;padding:4px;margin-bottom:18px}
+.auth-tab{
+  flex:1;text-align:center;padding:11px 8px;font-size:15px;font-weight:700;
+  border-radius:6px;cursor:pointer;color:#4b5563;
+  -webkit-tap-highlight-color:transparent;user-select:none;
+}
+.auth-tab.active{background:#fff;color:#1a7a3c;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+/* Form */
+.fg{margin-bottom:14px}
+label{display:block;font-size:11px;font-weight:700;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em}
+input{width:100%;padding:12px 13px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;color:#111827;background:#fff;outline:none;-webkit-appearance:none}
+input:focus{border-color:#22963f;box-shadow:0 0 0 3px rgba(34,150,63,.12)}
+select{width:100%;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:#111827;background:#fff;outline:none;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%236b7280' d='M6 8L0 0h12z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+select:focus{border-color:#22963f}
+textarea{width:100%;padding:11px 13px;border:1.5px solid #e5e7eb;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:#111827;background:#fff;outline:none;resize:vertical}
+textarea:focus{border-color:#22963f}
+.msg{padding:10px 13px;border-radius:8px;font-size:13px;font-weight:600;margin-top:10px}
+.msg-error{background:#fee2e2;color:#991b1b}
+.msg-success{background:#dcfce7;color:#166534}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 16px;border-radius:8px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;-webkit-tap-highlight-color:transparent;user-select:none;transition:opacity .15s}
+.btn:active{opacity:.8}
+.btn-primary{background:#22963f;color:#fff;width:100%;padding:13px;font-size:15px}
+.btn-secondary{background:#f3f4f6;color:#374151}
+.btn-danger{background:#fee2e2;color:#ef4444}
+.btn-danger:active{background:#ef4444;color:#fff}
+.btn-amber{background:#fef3c7;color:#92400e}
+.btn-blue{background:#eff6ff;color:#1d4ed8}
+.btn-sm{padding:6px 11px;font-size:12px}
+.btn-xs{padding:4px 8px;font-size:11px}
+.btn-full{width:100%}
+
+/* ── TOPBAR ── */
+.topbar{background:#1a7a3c;color:#fff;padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2);flex-shrink:0}
+.topbar-logo{font-size:16px;font-weight:800}
+.topbar-logo span{color:#85e0a0}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.user-chip{background:rgba(255,255,255,.15);border-radius:20px;padding:5px 11px;font-size:12px;font-weight:600}
+.offline-chip{background:#fef3c7;color:#92400e;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;text-transform:uppercase;display:none}
+
+/* ── NAV ── */
+.nav-tabs{background:#fff;display:flex;border-bottom:2px solid #e5e7eb;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-shrink:0}
+.nav-tabs::-webkit-scrollbar{display:none}
+.nav-tab{flex-shrink:0;padding:13px 16px;font-size:13px;font-weight:600;color:#4b5563;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-2px;white-space:nowrap;-webkit-tap-highlight-color:transparent;user-select:none}
+.nav-tab.active{color:#1a7a3c;border-bottom-color:#22963f}
+
+/* ── CONTENT ── */
+.content{flex:1;padding:16px;max-width:1100px;margin:0 auto;width:100%;overflow-y:auto}
+.page{display:none}.page.active{display:block}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:var(--radius);border:1px solid #e5e7eb;box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px}
+.card-head{padding:13px 16px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;background:#f9fafb;gap:8px;flex-wrap:wrap}
+.card-head h2{font-size:14px;font-weight:700}
+.card-body{padding:16px}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+@media(min-width:480px){.stats-grid{grid-template-columns:repeat(4,1fr)}}
+.stat-card{background:#fff;border-radius:var(--radius);padding:14px;border:1px solid #e5e7eb;text-align:center}
+.stat-num{font-size:26px;font-weight:800;color:#1a7a3c}
+.stat-label{font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+
+/* ── SCHOOL LIST ── */
+.school-item{background:#fff;border-radius:var(--radius);border:1.5px solid #e5e7eb;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px}
+.school-item h3{font-size:14px;font-weight:700}
+.school-item p{font-size:11px;color:#9ca3af;margin-top:2px}
+.school-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0}
+.classes-panel{background:#f9fafb;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 var(--radius) var(--radius);padding:10px 12px;margin-top:-8px;margin-bottom:8px;display:none}
+.class-item{background:#fff;border-radius:10px;border:1px solid #e5e7eb;padding:10px 13px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px}
+.class-item-info{flex:1}
+.class-item-info h4{font-size:13px;font-weight:700}
+.class-item-info p{font-size:11px;color:#9ca3af;margin-top:2px}
+.class-item-actions{display:flex;gap:5px;flex-shrink:0}
+
+/* ── BADGE ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-left:4px}
+.bg{background:#e6f7ec;color:#155d2d}
+.ba{background:#fef3c7;color:#92400e}
+.bb{background:#eff6ff;color:#1e40af}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:22px;animation:up .28s ease}
+@media(min-width:560px){.overlay{align-items:center}.modal{border-radius:24px;margin:16px}}
+@keyframes up{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-head h3{font-size:16px;font-weight:800}
+.modal-close{width:30px;height:30px;border-radius:50%;background:#f3f4f6;border:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:400px){.form-grid{grid-template-columns:1fr}}
+
+/* ── MARKS TABLE ── */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;min-width:500px}
+thead th{background:#155d2d;color:#fff;padding:8px 10px;font-size:11px;font-weight:700;text-align:left;white-space:nowrap}
+tbody tr:nth-child(even){background:#f9fafb}
+tbody tr:hover{background:#f0fbf4}
+td{padding:6px 10px;font-size:12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+.mark-input{width:54px;padding:4px 6px;font-size:12px;text-align:center;border:1.5px solid #e5e7eb;border-radius:5px;font-family:'Plus Jakarta Sans',sans-serif}
+.mark-input:focus{border-color:#22963f;outline:none}
+.name-input{min-width:130px;padding:4px 7px;font-size:12px;border:1.5px solid #e5e7eb;border-radius:5px;font-family:'Plus Jakarta Sans',sans-serif}
+.name-input:focus{border-color:#22963f;outline:none}
+.adm-input{width:62px;padding:4px 6px;font-size:12px;border:1.5px solid #e5e7eb;border-radius:5px;font-family:'Plus Jakarta Sans',sans-serif}
+.adm-input:focus{border-color:#22963f;outline:none}
+.grd{display:inline-block;min-width:28px;text-align:center;padding:2px 5px;border-radius:5px;font-size:10px;font-weight:800}
+.gA{background:#dcfce7;color:#166534}.gB{background:#dbeafe;color:#1e40af}
+.gC{background:#fef3c7;color:#92400e}.gD{background:#fee2e2;color:#991b1b}
+.gE,.gY{background:#f3f4f6;color:#6b7280}
+
+/* ── SUBJECT CHIPS ── */
+.chip{display:inline-flex;align-items:center;background:#e6f7ec;border:1.5px solid #85e0a0;border-radius:20px;padding:5px 11px;font-size:12px;font-weight:600;color:#155d2d;cursor:pointer;margin:3px;-webkit-tap-highlight-color:transparent;user-select:none}
+.chip.off{background:#f3f4f6;border-color:#e5e7eb;color:#9ca3af}
+.chip:active{transform:scale(.95)}
+
+/* ── CSV DROP ── */
+.csv-drop{border:2px dashed #e5e7eb;border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;background:#f9fafb}
+.csv-drop:active{border-color:#22963f;background:#f0fbf4}
+.csv-drop .icon{font-size:30px;margin-bottom:6px}
+.csv-drop p{font-size:13px;color:#4b5563}
+.csv-drop small{font-size:11px;color:#9ca3af}
+
+/* ── CHARTS ── */
+.chart-wrap{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.chart-row{display:flex;align-items:center;gap:8px}
+.chart-lbl{width:50px;font-size:11px;font-weight:700;text-align:right;flex-shrink:0}
+.chart-bg{flex:1;height:20px;background:#f3f4f6;border-radius:5px;overflow:hidden}
+.chart-bar{height:100%;border-radius:5px;display:flex;align-items:center;padding-left:7px;font-size:10px;font-weight:700;color:#fff;min-width:2px;transition:width .5s ease}
+.chart-cnt{width:28px;font-size:11px;font-weight:700;color:#374151}
+
+/* ── AI REMARKS ── */
+.remark-box{background:#f0fbf4;border:1.5px solid #85e0a0;border-radius:var(--radius);padding:14px;margin-top:12px}
+.thinking{display:flex;align-items:center;gap:7px;color:#1a7a3c;font-size:13px;font-weight:600;padding:10px 0}
+.dot{width:7px;height:7px;border-radius:50%;background:#22963f;animation:pulse 1s infinite}
+.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+@keyframes pulse{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:36px 16px;color:#9ca3af}
+.empty .icon{font-size:40px;margin-bottom:8px}
+.empty h3{font-size:14px;font-weight:700;color:#4b5563;margin-bottom:4px}
+.empty p{font-size:12px;margin-bottom:12px}
+
+/* ── SECTION HEADER ── */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.sec-head h2{font-size:17px;font-weight:800}
+
+/* ── BREADCRUMB ── */
+.breadcrumb{display:flex;align-items:center;gap:5px;font-size:12px;color:#9ca3af;margin-bottom:12px;flex-wrap:wrap}
+.breadcrumb span.link{cursor:pointer;color:#1a7a3c}
+
+/* ── ANALYSIS GRID ── */
+.an-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:480px){.an-grid{grid-template-columns:1fr}}
+
+/* ── INSTALL BANNER ── */
+#install-banner{background:linear-gradient(90deg,#155d2d,#22963f);color:#fff;padding:9px 14px;display:none;align-items:center;justify-content:space-between;gap:8px;font-size:12px;flex-shrink:0}
+#install-banner.show{display:flex}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:#111827;color:#fff;padding:11px 18px;border-radius:16px;font-size:13px;font-weight:600;z-index:9999;transition:transform .3s;pointer-events:none;white-space:normal;max-width:88vw;width:max-content;text-align:center;word-break:break-word;line-height:1.45}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+@media(max-width:480px){
+  .auth-card{padding:24px 18px}
+  .topbar{padding:0 12px}
+  .content{padding:12px}
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- GUIDED TOUR MODAL -->
+<div id="o-tour" class="overlay" style="z-index:9999">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-head" style="background:linear-gradient(135deg,#0d4a21,#1a7a3c)">
+      <h3 style="color:white">👋 Welcome to Agunextech AAS</h3>
+      <button class="modal-close" onclick="tourNext()" style="color:white">×</button>
+    </div>
+    <div id="tour-body" style="padding:16px"></div>
+    <div style="padding:0 16px 16px;display:flex;justify-content:space-between;align-items:center">
+      <span id="tour-step-label" style="font-size:11px;color:#9ca3af"></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm btn-secondary" onclick="tourSkip()">Skip Tour</button>
+        <button class="btn btn-sm btn-primary" id="tour-next-btn" onclick="tourNext()">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INSTALL BANNER -->
+<div id="install-banner">
+  <span>📲 Install as app for offline use</span>
+  <button class="btn btn-sm" id="install-btn" style="background:#fff;color:#1a7a3c">Install</button>
+  <button onclick="document.getElementById('install-banner').classList.remove('show')" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;line-height:1">×</button>
+</div>
+
+<!-- ══════════════════════════
+     AUTH SCREEN
+══════════════════════════ -->
+<div id="auth-screen" class="screen active">
+  <div class="auth-card">
+
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🎓</div>
+      <div>
+        <h1>Agunextech</h1>
+        <p>Academic Analysis System</p>
+      </div>
+    </div>
+
+    <!-- DEMO BAR -->
+    <div class="demo-bar">
+      <p>🧪 Try Demo — No signup needed</p>
+      <div class="demo-creds">
+        <div class="demo-cred"><strong>Email</strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d3b7b6bebc93b2b2a0fdb8b6">[email&#160;protected]</a></div>
+        <div class="demo-cred"><strong>Password</strong>demo1234</div>
+      </div>
+      <button class="btn-demo" onclick="demoLogin()">▶ Enter Demo Now</button>
+    </div>
+
+    <!-- TABS -->
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</div>
+      <div class="auth-tab" id="tab-register" onclick="switchTab('register')">Register</div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="login-form">
+      <div class="fg">
+        <label>Email Address</label>
+        <input type="email" id="login-email" placeholder="teacher@school.ac.ke" autocomplete="email"/>
+      </div>
+      <div class="fg">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <button class="btn btn-primary" onclick="handleLogin(this)">Sign In →</button>
+      <p style="text-align:center;margin-top:8px">
+        <span onclick="handleForgotPassword()" style="font-size:12px;color:#1a7a3c;cursor:pointer;text-decoration:underline">Forgot Password?</span>
+      </p>
+      <div id="login-msg"></div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="register-form" style="display:none">
+      <div class="fg">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Your full name"/>
+      </div>
+      <div class="fg">
+        <label>Email Address</label>
+        <input type="email" id="reg-email" placeholder="teacher@school.ac.ke" autocomplete="email"/>
+      </div>
+      <div class="fg">
+        <label>Password</label>
+        <input type="password" id="reg-pass" placeholder="Min. 6 characters" autocomplete="new-password"/>
+      </div>
+      <div class="fg">
+        <label>Your Role</label>
+        <select id="reg-role">
+          <option value="teacher">Teacher</option>
+          <option value="principal">Principal</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="reg-btn" onclick="handleRegister(this)">Create Account →</button>
+      <div id="reg-msg"></div>
+    </div>
+
+    <p style="text-align:center;font-size:10px;color:#9ca3af;margin-top:14px">🔒 Secured by Firebase · Data syncs across devices</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+     APP SCREEN
+══════════════════════════ -->
+<div id="app-screen" class="screen">
+
+  <div class="topbar">
+    <div class="topbar-logo">Agunex<span>tech</span></div>
+    <div class="topbar-right">
+      <span class="offline-chip" id="offline-chip">Offline</span>
+      <span id="role-badge" style="display:none;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.2);color:white;text-transform:uppercase"></span>
+      <span class="user-chip">👤 <span id="user-display">User</span></span>
+      <button class="btn btn-sm" onclick="handleLogout()" style="background:rgba(255,255,255,.15);color:#fff">Logout</button>
+    </div
